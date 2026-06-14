@@ -1,0 +1,101 @@
+"use client";
+/**
+ * Single client boundary. Convex is the store and EVERYTHING is behind auth:
+ * AuthGate shows the sign-in screen until the user has an identity, then seeds
+ * presets/settings once and renders the app. No local Dexie.
+ */
+import { useEffect, useRef, useState } from "react";
+import { ConvexAuthProvider } from "@convex-dev/auth/react";
+import { useConvexAuth, useQuery, useMutation } from "convex/react";
+import { api } from "@convex/_generated/api";
+import { convexClient } from "@/store/convex";
+import { SignIn } from "@/components/auth/SignIn";
+import { RemindersSync } from "@/scheduling/RemindersSync";
+
+function useServiceWorker() {
+  useEffect(() => {
+    if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+  }, []);
+}
+
+function Splash() {
+  return (
+    <main className="flex min-h-dvh items-center justify-center">
+      <div className="h-10 w-10 animate-pulse rounded-full bg-green-200" />
+    </main>
+  );
+}
+
+/** Requires an identity; seeds presets + settings once after sign-in. */
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const { isLoading, isAuthenticated } = useConvexAuth();
+  const settings = useQuery(api.settings.get, isAuthenticated ? {} : "skip");
+  const ensureSeeded = useMutation(api.plans.ensureSeeded);
+  const saveSettings = useMutation(api.settings.save);
+  // Ref guard set synchronously — prevents a double-seed race and, on failure,
+  // stops the effect from re-firing forever (settings stays null otherwise).
+  const seedingRef = useRef(false);
+  const [seedError, setSeedError] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated || settings === undefined || settings !== null || seedingRef.current) return;
+    seedingRef.current = true;
+    setSeedError(false);
+    (async () => {
+      const defaultPlanId = await ensureSeeded({});
+      await saveSettings({ activePlanId: defaultPlanId ?? null, hasOnboarded: false });
+    })().catch(() => {
+      // Surface a retry instead of hammering the backend on a persistent error.
+      seedingRef.current = false;
+      setSeedError(true);
+    });
+  }, [isAuthenticated, settings, ensureSeeded, saveSettings]);
+
+  if (isLoading) return <Splash />;
+  if (!isAuthenticated) return <SignIn />;
+  if (settings === undefined || settings === null) {
+    if (seedError) {
+      return (
+        <main className="flex min-h-dvh flex-col items-center justify-center gap-3 px-8 text-center">
+          <p className="text-ink-soft">Couldn&apos;t finish setting up your account.</p>
+          <button
+            className="font-semibold text-green-700 underline"
+            onClick={() => {
+              setSeedError(false); // re-arm the effect for one more attempt
+            }}
+          >
+            Try again
+          </button>
+        </main>
+      );
+    }
+    return <Splash />; // seeding
+  }
+  return (
+    <>
+      <RemindersSync />
+      {children}
+    </>
+  );
+}
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  useServiceWorker();
+  const client = convexClient();
+
+  if (!client) {
+    return (
+      <main className="flex min-h-dvh items-center justify-center px-8 text-center text-ink-soft">
+        Cloud backend isn&apos;t configured (set NEXT_PUBLIC_CONVEX_URL).
+      </main>
+    );
+  }
+
+  return (
+    <ConvexAuthProvider client={client}>
+      <AuthGate>{children}</AuthGate>
+    </ConvexAuthProvider>
+  );
+}
