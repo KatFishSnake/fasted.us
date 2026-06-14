@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens (plan §Design system). Authored light-only; dark mode is a
+ * later token-swap. Colors chosen for calm surface hierarchy + AA contrast.
+ */
+@theme {
+  --color-bg: #f6f7f4;
+  --color-surface: #ffffff;
+
+  --color-green-50: #eef7f0;
+  --color-green-100: #d9eede;
+  --color-green-200: #b6e0c2;
+  --color-green-400: #5cc585;
+  --color-green-500: #34b06a;
+  --color-green-600: #1f9a59;
+  --color-green-700: #167a47;
+
+  --color-accent-500: #f4613a;
+  --color-amber-500: #f59e0b;
+
+  --color-ink: #14211b;
+  --color-ink-soft: #4a5a52;
+  --color-ink-faint: #8b988f;
+  --color-hairline: #e4e8e2;
+
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
+
+  --shadow-soft: 0 8px 30px -12px rgba(31, 154, 89, 0.25);
+  --shadow-card: 0 1px 2px rgba(20, 33, 27, 0.04), 0 6px 20px -14px rgba(20, 33, 27, 0.18);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  background: var(--color-bg);
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  /* Native-feel: no text selection / callout on the chrome. */
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+/* Honour reduced-motion globally. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+
+/* Safe-area helpers for installed standalone display. */
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
+}
+.pt-safe {
+  padding-top: calc(env(safe-area-inset-top) + 0.5rem);
+}

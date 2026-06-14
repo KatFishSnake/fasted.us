@@ -1,0 +1,30 @@
+# dependencies
+node_modules
+
+# next.js
+.next
+out
+next-env.d.ts
+*.tsbuildinfo
+
+# serwist generated output
+public/sw.js
+public/sw.js.map
+public/swe-worker-*.js
+
+# convex generated
+convex/_generated
+
+# env
+.env
+.env*.local
+
+# os / editor
+.DS_Store
+.idea
+coverage
+
+# playwright
+/test-results
+/playwright-report
+/.playwright
