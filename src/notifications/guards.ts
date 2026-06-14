@@ -1,7 +1,9 @@
 /**
- * SW-side guard: recompute deriveState from the shared Dexie DB and decide
- * whether a just-received push is still relevant (plan: three dedup layers +
- * SW fallback, codex #4/#11). Pure decision given (kind, derived-or-null).
+ * SW-side guard: decide whether a just-received push is still relevant
+ * (plan: three dedup layers + SW fallback, codex #4/#11). The SW can't read
+ * Convex (no auth token), so `state` is normally null on web push and the
+ * kind-based fallback applies; the derived-state branch is exercised by the
+ * Capacitor build where on-device state IS readable. Pure decision.
  */
 import type { ReminderKind } from "../scheduling/schedule";
 import type { DerivedState } from "../domain/types";

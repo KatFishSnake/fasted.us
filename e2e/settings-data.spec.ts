@@ -18,6 +18,23 @@ test.describe("Settings & data", () => {
     await expect(page.getByRole("switch").first()).toHaveAttribute("aria-checked", "false");
   });
 
+  test("email backstop is off by default and persists when enabled", async ({ page }) => {
+    const email = page.getByRole("switch", { name: /Email backstop/ });
+    await expect(email).toHaveAttribute("aria-checked", "false"); // opt-in
+    await email.click();
+    await expect(email).toHaveAttribute("aria-checked", "true");
+
+    await page.reload();
+    await expect(page.getByRole("switch", { name: /Email backstop/ })).toHaveAttribute("aria-checked", "true");
+  });
+
+  test("disabling reminders disables the per-kind sub-toggles", async ({ page }) => {
+    const preStart = page.getByRole("switch", { name: /30 min before/ });
+    await expect(preStart).toBeEnabled();
+    await page.getByRole("switch").first().click(); // turn reminders off
+    await expect(preStart).toBeDisabled();
+  });
+
   test("export produces a JSON backup download", async ({ page }) => {
     const downloadPromise = page.waitForEvent("download");
     await page.getByRole("button", { name: "Export" }).click();

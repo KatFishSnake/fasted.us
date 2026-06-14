@@ -1,6 +1,6 @@
 import { RING } from "@/lib/ring/geometry";
 
-/** Shown until the client mounts + Dexie hydrates (no SSR Date.now mismatch). */
+/** Shown until the client mounts + Convex data loads (no SSR Date.now mismatch). */
 export function RingSkeleton() {
   return (
     <div

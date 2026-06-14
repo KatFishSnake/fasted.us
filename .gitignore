@@ -12,8 +12,9 @@ public/sw.js
 public/sw.js.map
 public/swe-worker-*.js
 
-# convex generated
-convex/_generated
+# convex generated code is COMMITTED (Convex's recommendation): typecheck/build
+# need it, and CI has no deployment to regenerate from. Run `npx convex codegen`
+# (or `convex dev`) after schema/function changes to refresh it.
 
 # env
 .env

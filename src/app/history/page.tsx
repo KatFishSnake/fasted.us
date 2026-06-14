@@ -1,14 +1,19 @@
 "use client";
-/** History — list + honest total-hours record (plan §Scope, decision 3). */
+/** History — list + calendar + honest total-hours record (plan §Scope, decision 3). */
+import { useState } from "react";
 import { useMounted, useHistory } from "@/store/hooks";
 import { TabBar } from "@/components/nav/TabBar";
+import { HistoryCalendar } from "@/components/history/Calendar";
 import { formatDuration, formatDate, formatClock } from "@/lib/format";
 import { Check } from "lucide-react";
 import type { Fast } from "@/domain/types";
 
+type View = "list" | "calendar";
+
 export default function HistoryPage() {
   const mounted = useMounted();
   const history = useHistory();
+  const [view, setView] = useState<View>("list");
 
   const completed = (history ?? []).filter((f) => f.status === "completed" && f.endAt != null);
   // Honest record: Σ(endAt − startAt) over completed fasts — not gamified.
@@ -24,10 +29,14 @@ export default function HistoryPage() {
         </p>
       </header>
 
+      <ViewToggle view={view} onChange={setView} />
+
       {!mounted ? (
         <SkeletonRows />
       ) : completed.length === 0 ? (
         <Empty />
+      ) : view === "calendar" ? (
+        <HistoryCalendar fasts={completed} />
       ) : (
         <ul className="divide-y divide-hairline">
           {completed.map((f) => (
@@ -38,6 +47,31 @@ export default function HistoryPage() {
 
       <TabBar />
     </main>
+  );
+}
+
+function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => void }) {
+  return (
+    <div
+      role="tablist"
+      aria-label="History view"
+      className="mb-4 flex gap-1 rounded-[var(--radius-md)] bg-green-50 p-1"
+    >
+      {(["list", "calendar"] as const).map((v) => (
+        <button
+          key={v}
+          role="tab"
+          aria-selected={view === v}
+          onClick={() => onChange(v)}
+          className={[
+            "flex-1 rounded-[var(--radius-sm)] py-1.5 text-sm font-medium capitalize transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-600",
+            view === v ? "bg-surface text-ink shadow-soft" : "text-ink-soft",
+          ].join(" ")}
+        >
+          {v}
+        </button>
+      ))}
+    </div>
   );
 }
 

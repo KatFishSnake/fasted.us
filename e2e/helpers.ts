@@ -48,6 +48,35 @@ export async function startFastNow(page: Page) {
   await expect(page.getByRole("button", { name: "End fast" })).toBeVisible();
 }
 
+/** datetime-local input value (browser-local zone) for `hoursAgo` before now. */
+function datetimeLocalHoursAgo(hoursAgo: number): string {
+  const d = new Date(Date.now() - hoursAgo * 3_600_000);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/**
+ * Start a fast the user asserts began `hoursAgo` ago (manual backdate). Drives
+ * the StartSheet's "I started earlier…" branch + native datetime-local input.
+ */
+export async function startFastBackdated(page: Page, hoursAgo: number) {
+  await page.getByRole("button", { name: "Start fast" }).click();
+  const sheet = page.getByRole("dialog");
+  await sheet.getByRole("button", { name: "I started earlier" }).click();
+  await sheet.locator("#start-time").fill(datetimeLocalHoursAgo(hoursAgo));
+  await sheet.getByRole("button", { name: "Start fast" }).click();
+  await expect(page.getByRole("button", { name: "End fast" })).toBeVisible();
+}
+
+/** Open the plans sheet from the plan pill and switch to the plan matching `name`. */
+export async function choosePlan(page: Page, name: RegExp) {
+  await page.getByRole("button", { name: "Edit plan" }).click();
+  const sheet = page.getByRole("dialog");
+  await expect(sheet.getByRole("heading", { name: "Choose your plan" })).toBeVisible();
+  await sheet.getByRole("button", { name }).click();
+  await expect(sheet).toBeHidden();
+}
+
 /** End the active fast "now" via the End sheet. */
 export async function endFastNow(page: Page) {
   await page.getByRole("button", { name: "End fast" }).click();

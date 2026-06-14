@@ -47,6 +47,16 @@ export function formatDate(epochMs: number, timeZone?: string): string {
   }).format(epochMs);
 }
 
+/** "2026-06-14" local day key in a given zone — used to bucket fasts by day. */
+export function dayKey(epochMs: number, timeZone?: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: timeZone && timeZone !== "device" ? timeZone : undefined,
+  }).format(epochMs);
+}
+
 /** Convert an epoch ms to the value an <input type="datetime-local"> expects. */
 export function toDatetimeLocalValue(epochMs: number): string {
   const d = new Date(epochMs);

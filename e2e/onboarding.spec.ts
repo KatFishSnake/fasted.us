@@ -16,7 +16,7 @@ test.describe("Onboarding", () => {
 
   test("onboarding is not shown again after completion", async ({ page }) => {
     await completeOnboarding(page);
-    // Reload — settings.hasOnboarded persisted in IndexedDB should keep us home.
+    // Reload — settings.hasOnboarded persisted in the account should keep us home.
     await page.reload();
     await expect(page).toHaveURL(/\/$|\/\?/);
     await expect(page.getByText("Ready to fast")).toBeVisible();

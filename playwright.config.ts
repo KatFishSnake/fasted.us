@@ -3,14 +3,15 @@ import { defineConfig, devices } from "@playwright/test";
 /**
  * E2E config for the Fasted PWA.
  *
- * Scope: the local-first flows that run entirely against IndexedDB in a real
- * browser (onboarding, start/end a fast, ring + stages, history, settings,
- * export/import). Auth (Google), Web Push, and Convex sync are deployment- and
- * hardware-gated and are intentionally NOT covered here — they can't run from
- * a headless CI box without live secrets / a real device.
+ * Scope: the in-app flows that run in a real browser against the Convex dev
+ * deployment using the Anonymous auth provider (onboarding, plans, start/end +
+ * backdate + overtime + edit, history list/calendar, settings, export, sign
+ * out). Google OAuth and Web Push delivery are deployment-/hardware-gated and
+ * are intentionally NOT covered here — they need live secrets / a real device.
  *
- * Boots `next dev` itself. Each test gets a fresh browser context, so
- * IndexedDB starts empty and the app drops the user into onboarding.
+ * Requires NEXT_PUBLIC_CONVEX_URL (the client connects to Convex). Boots
+ * `next dev` itself. Each test gets a fresh browser context with no session,
+ * so the app shows sign-in → a fresh anonymous account → onboarding.
  */
 export default defineConfig({
   testDir: "./e2e",
