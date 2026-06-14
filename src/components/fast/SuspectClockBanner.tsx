@@ -3,6 +3,7 @@ import { useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 
 /** Surfaced when a fast has run 7+ days — likely a clock change (never auto-completed). */
 export function SuspectClockBanner({ fastId }: { fastId: string | null }) {
@@ -13,7 +14,7 @@ export function SuspectClockBanner({ fastId }: { fastId: string | null }) {
     if (!fastId) return;
     setBusy(true);
     try {
-      await abandon({ fastId: fastId as never });
+      await abandon({ fastId: fastId as Id<"fasts"> });
     } finally {
       setBusy(false);
     }

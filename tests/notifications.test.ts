@@ -43,12 +43,14 @@ describe("shouldStillShow", () => {
     expect(shouldStillShow("overtime", deriveState(T0 + target + MS.HOUR, { ...fast, goalAckAt: T0 + target }))).toBe(true);
   });
 
-  test("IDB-unreadable fallback: show critical, suppress naggy", () => {
+  test("no-state fallback shows all kinds (server is authoritative)", () => {
+    // The cron only sends pending reminders and cancels on end/abandon, so a
+    // received push is always one the server decided is still live.
     expect(shouldStillShow("preStart", null)).toBe(true);
     expect(shouldStillShow("start", null)).toBe(true);
     expect(shouldStillShow("grace", null)).toBe(true);
     expect(shouldStillShow("goal", null)).toBe(true);
-    expect(shouldStillShow("overtime", null)).toBe(false);
-    expect(shouldStillShow("forgot", null)).toBe(false);
+    expect(shouldStillShow("overtime", null)).toBe(true);
+    expect(shouldStillShow("forgot", null)).toBe(true);
   });
 });

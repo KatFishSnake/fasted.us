@@ -33,9 +33,14 @@ export const save = mutation({
   handler: async (ctx, patch) => {
     const userId = await requireUser(ctx);
     const now = Date.now();
+    // Never store a malformed prefs object — merge onto the full default shape
+    // so reads (RemindersSync, cron) can always rely on every key being present.
+    const cleanPatch = patch.reminderPrefs
+      ? { ...patch, reminderPrefs: { ...DEFAULT_PREFS, ...patch.reminderPrefs } }
+      : patch;
     const existing = await ctx.db.query("appSettings").withIndex("by_user", (q) => q.eq("userId", userId)).unique();
     if (existing) {
-      await ctx.db.patch(existing._id, { ...patch, updatedAt: now });
+      await ctx.db.patch(existing._id, { ...cleanPatch, updatedAt: now });
       return;
     }
     await ctx.db.insert("appSettings", {

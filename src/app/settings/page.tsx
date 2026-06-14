@@ -19,6 +19,15 @@ export default function SettingsPage() {
   async function setPref<K extends keyof ReminderPrefs>(key: K, value: ReminderPrefs[K]) {
     if (!settings) return;
     await saveSettings({ reminderPrefs: { ...settings.reminderPrefs, [key]: value } });
+    // Turning reminders off should actually stop closed-app push, not just hide UI.
+    if (key === "enabled" && value === false) {
+      const { convexClient } = await import("@/store/convex");
+      const client = convexClient();
+      if (client) {
+        const { unsubscribeFromPush } = await import("@/push/subscribe");
+        await unsubscribeFromPush(client);
+      }
+    }
   }
 
   function exportData() {

@@ -5,10 +5,25 @@
  * a fast exists only when the user explicitly starts it.
  */
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, type MutationCtx } from "./_generated/server";
 import { requireUser, optionalUser } from "./authz";
+import type { Id } from "./_generated/dataModel";
 
 const MAX_PLAUSIBLE_FAST_MS = 7 * 86_400_000;
+
+/** Cancel all pending reminders scoped to a fast (dedupKey = `${fastId}:...`). */
+async function cancelFastReminders(ctx: MutationCtx, userId: Id<"users">, fastId: string) {
+  const rows = await ctx.db
+    .query("reminders")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+  const prefix = `${fastId}:`;
+  for (const r of rows) {
+    if (r.status === "pending" && r.dedupKey.startsWith(prefix)) {
+      await ctx.db.patch(r._id, { status: "cancelled" });
+    }
+  }
+}
 
 export const getOpen = query({
   args: {},
@@ -37,10 +52,10 @@ export const history = query({
 });
 
 export const start = mutation({
+  // targetMs/planKind are NOT trusted from the client — they're derived from the
+  // user's own plan server-side, so a crafted call can't store a bogus target.
   args: {
-    planId: v.string(),
-    planKind: v.string(),
-    targetMs: v.number(),
+    planId: v.id("plans"),
     startAt: v.optional(v.number()),
     tz: v.string(),
   },
@@ -49,6 +64,13 @@ export const start = mutation({
     const now = Date.now();
     const startAt = args.startAt ?? now;
     if (startAt > now) throw new Error("Start time can't be in the future.");
+    if (now - startAt > MAX_PLAUSIBLE_FAST_MS) {
+      throw new Error("Start time is implausibly far in the past.");
+    }
+
+    const plan = await ctx.db.get(args.planId);
+    if (!plan || plan.userId !== userId) throw new Error("Plan not found");
+    if (plan.fastingMs <= 0) throw new Error("Plan has an invalid fasting window.");
 
     const open = await ctx.db
       .query("fasts")
@@ -59,8 +81,8 @@ export const start = mutation({
     return await ctx.db.insert("fasts", {
       userId,
       planId: args.planId,
-      planKindSnapshot: args.planKind,
-      targetMs: args.targetMs,
+      planKindSnapshot: plan.kind,
+      targetMs: plan.fastingMs,
       startAt,
       endAt: null,
       status: "active",
@@ -91,6 +113,9 @@ export const end = mutation({
       goalMet: duration >= fast.targetMs,
       updatedAt: now,
     });
+    // The fast is over — cancel its goal/overtime/forgot reminders so the cron
+    // sweep never sends a stale push for a fast the user already ended.
+    await cancelFastReminders(ctx, userId, fastId);
   },
 });
 
@@ -102,17 +127,18 @@ export const edit = mutation({
     if (!fast || fast.userId !== userId) throw new Error("Fast not found");
     const nextStart = startAt ?? fast.startAt;
     const nextEnd = endAt !== undefined ? endAt : fast.endAt;
-    if (nextEnd != null) {
-      if (nextEnd <= nextStart) throw new Error("End time must be after the start.");
-      const duration = nextEnd - nextStart;
-      if (duration > MAX_PLAUSIBLE_FAST_MS) {
-        // Allowed but flagged in the UI via suspectClock — don't hard-reject.
-      }
+    if (nextEnd != null && nextEnd <= nextStart) {
+      throw new Error("End time must be after the start.");
+      // Durations > 7d are allowed but flagged in the UI via suspectClock.
     }
+    const goalMet = nextEnd != null ? nextEnd - nextStart >= fast.targetMs : fast.goalMet;
     await ctx.db.patch(fastId, {
       startAt: nextStart,
       endAt: nextEnd,
-      goalMet: nextEnd != null ? nextEnd - nextStart >= fast.targetMs : fast.goalMet,
+      goalMet,
+      // If an edit pushes the goal back out of reach, drop the stale ack so the
+      // goal-crossing flow can fire again should the times later qualify.
+      goalAckAt: goalMet === false ? undefined : fast.goalAckAt,
       updatedAt: Date.now(),
     });
   },
@@ -125,6 +151,7 @@ export const abandon = mutation({
     const fast = await ctx.db.get(fastId);
     if (!fast || fast.userId !== userId) throw new Error("Fast not found");
     await ctx.db.patch(fastId, { status: "abandoned", updatedAt: Date.now() });
+    await cancelFastReminders(ctx, userId, fastId);
   },
 });
 

@@ -34,7 +34,3 @@ export const ROLLING_WINDOW_DAYS = 7;
 
 /** Render heartbeat — re-derive at most once per second for display only. */
 export const HEARTBEAT_MS = 1 * MS.SECOND;
-
-/** Local-storage / schema version for export envelopes + Dexie migrations. */
-export const SCHEMA_VERSION = 1;
-export const EXPORT_FORMAT = "fasted.backup" as const;

@@ -17,8 +17,18 @@ export const subscribe = mutation({
       .query("pushSubs")
       .withIndex("by_endpoint", (q) => q.eq("endpoint", args.endpoint))
       .unique();
-    if (existing) await ctx.db.patch(existing._id, { ...args, userId });
-    else await ctx.db.insert("pushSubs", { userId, ...args });
+    // Only adopt an existing row if it's unowned or already this user's —
+    // never hijack another account's subscription by submitting its endpoint.
+    if (existing && existing.userId === userId) {
+      await ctx.db.patch(existing._id, { ...args, userId });
+    } else if (!existing) {
+      await ctx.db.insert("pushSubs", { userId, ...args });
+    } else {
+      // Endpoint belongs to someone else (shouldn't happen — endpoints are
+      // per-device-per-origin); replace it with a fresh row for this user.
+      await ctx.db.delete(existing._id);
+      await ctx.db.insert("pushSubs", { userId, ...args });
+    }
     return { ok: true };
   },
 });
@@ -26,11 +36,14 @@ export const subscribe = mutation({
 export const unsubscribe = mutation({
   args: { endpoint: v.string() },
   handler: async (ctx, { endpoint }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not signed in");
     const existing = await ctx.db
       .query("pushSubs")
       .withIndex("by_endpoint", (q) => q.eq("endpoint", endpoint))
       .unique();
-    if (existing) await ctx.db.delete(existing._id);
+    // Ownership check: a user can only remove their own subscription.
+    if (existing && existing.userId === userId) await ctx.db.delete(existing._id);
   },
 });
 

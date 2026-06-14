@@ -6,14 +6,20 @@
 import type { ReminderKind } from "../scheduling/schedule";
 import type { DerivedState } from "../domain/types";
 
-/** When IDB is unreadable: SHOW the time-critical kinds, SUPPRESS the naggy ones. */
+/**
+ * No-state fallback. The Convex cron is authoritative — it only sends *pending*
+ * reminders and cancels a fast's reminders when it ends — so when the SW has no
+ * state to check (the common case on web push), every kind it receives is one
+ * the server decided is still live. Show them all; the dead `state` branch below
+ * remains for the Capacitor build where on-device state IS readable.
+ */
 const FALLBACK_SHOW: Record<ReminderKind, boolean> = {
   preStart: true,
   start: true,
   grace: true,
   goal: true,
-  overtime: false,
-  forgot: false,
+  overtime: true,
+  forgot: true,
 };
 
 export function shouldStillShow(kind: ReminderKind, state: DerivedState | null): boolean {

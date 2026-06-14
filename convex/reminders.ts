@@ -41,14 +41,16 @@ export const syncReminders = mutation({
   },
 });
 
-/** Due, unsent reminders — read by the cron sweep. */
+/** Due, unsent reminders — read by the cron sweep. Bounded so one sweep never
+ *  loads the entire global backlog (which would blow the action time limit after
+ *  an outage); the next minute drains the rest. */
 export const due = internalQuery({
-  args: { now: v.number() },
-  handler: async (ctx, { now }) => {
+  args: { now: v.number(), limit: v.optional(v.number()) },
+  handler: async (ctx, { now, limit }) => {
     return await ctx.db
       .query("reminders")
       .withIndex("by_status_fire", (q) => q.eq("status", "pending").lte("fireAt", now))
-      .collect();
+      .take(limit ?? 200);
   },
 });
 

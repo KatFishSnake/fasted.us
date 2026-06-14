@@ -65,9 +65,12 @@ export function deriveState(
   const remainingMs = Math.max(0, targetMs - elapsedMs);
   const overtimeMs = Math.max(0, elapsedMs - targetMs);
   const progress = targetMs > 0 ? elapsedMs / targetMs : 0;
-  const goalMet = elapsedMs >= targetMs;
+  // A non-positive target is corrupt data — never treat it as an instant goal.
+  const goalMet = targetMs > 0 && elapsedMs >= targetMs;
   // Crossing-based: true once we first observe elapsed≥target before it's acked.
-  const goalCrossed = goalMet && fast.goalAckAt == null;
+  // Suppress while the clock looks wrong so a forward time-jump can't fire (and
+  // permanently persist) a bogus goal celebration before the user can fix it.
+  const goalCrossed = goalMet && fast.goalAckAt == null && !suspectClock;
 
   const status: DerivedState["status"] = !goalMet
     ? "active"

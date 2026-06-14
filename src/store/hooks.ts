@@ -7,6 +7,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import { SystemClock } from "@/domain/clock";
 import { deriveState } from "@/domain/state";
 import type { DerivedState, Fast, Plan, Settings } from "@/domain/types";
@@ -79,7 +80,7 @@ export function useDerivedFast(): DerivedState {
 
   useEffect(() => {
     if (state.goalCrossed && state.fastId) {
-      markGoalAck({ fastId: state.fastId as never, at: now }).catch(() => {});
+      markGoalAck({ fastId: state.fastId as Id<"fasts">, at: now }).catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.goalCrossed, state.fastId]);
@@ -104,12 +105,11 @@ export function useFastActions(): FastActions {
 
   const start = useCallback(
     async (opts?: { startAt?: number }) => {
+      // Server derives targetMs/planKind from the owned plan; we only send the id.
       const plan = plans?.find((p) => p.id === settings?.activePlanId) ?? plans?.[0];
       if (!plan) throw new Error("No active plan");
       await startFast({
-        planId: plan.id,
-        planKind: plan.kind,
-        targetMs: plan.fastingMs,
+        planId: plan.id as Id<"plans">,
         startAt: opts?.startAt,
         tz: settings?.timeZone && settings.timeZone !== "device"
           ? settings.timeZone
@@ -121,21 +121,21 @@ export function useFastActions(): FastActions {
 
   const end = useCallback(
     async (fastId: string, endAt?: number) => {
-      await endFast({ fastId: fastId as never, endAt });
+      await endFast({ fastId: fastId as Id<"fasts">, endAt });
     },
     [endFast],
   );
 
   const editEnd = useCallback(
     async (fastId: string, startAt: number, endAt: number) => {
-      await editFast({ fastId: fastId as never, startAt, endAt });
+      await editFast({ fastId: fastId as Id<"fasts">, startAt, endAt });
     },
     [editFast],
   );
 
   const abandon = useCallback(
     async (fastId: string) => {
-      await abandonFast({ fastId: fastId as never });
+      await abandonFast({ fastId: fastId as Id<"fasts"> });
     },
     [abandonFast],
   );

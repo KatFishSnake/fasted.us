@@ -48,8 +48,10 @@ export default function TimerPage() {
     if (state.goalCrossed) celebrate(reduced);
   }, [state.goalCrossed, reduced]);
 
-  const activePlan = plans?.find((p) => p.id === settings?.activePlanId);
-  const planLabel = activePlan?.label ?? "16:8";
+  // Fall back to the first real plan (not a hardcoded label) if activePlanId is
+  // stale/missing — start() uses the same fallback, so the pill never lies.
+  const activePlan = plans?.find((p) => p.id === settings?.activePlanId) ?? plans?.[0];
+  const planLabel = activePlan?.label ?? "—";
   const isActive = state.status !== "idle" && state.status !== "completed";
 
   const lastCompleted = history?.find((f) => f.status === "completed");

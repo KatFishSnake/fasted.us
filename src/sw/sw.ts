@@ -60,24 +60,28 @@ self.addEventListener("push", (event: PushEvent) => {
       }
       if (!payload?.kind) return;
 
-      // SW can't read Convex (no session); rely on the kind-based guard. The
-      // server already only sends pending reminders, so this is belt-and-suspenders.
+      // The server is authoritative: the cron only sends *pending* reminders and
+      // cancels a fast's reminders the moment it ends/abandons, so we trust the
+      // push and show it. `shouldStillShow(kind, null)` only filters structurally
+      // impossible kinds (defense in depth) — it no longer suppresses overtime/forgot.
       if (!shouldStillShow(payload.kind, null)) return;
 
-      const copy = NOTIF_COPY[payload.kind];
-      const outdated = payload.v > PAYLOAD_VERSION;
+      // Unknown kind (SW older than the payload) OR version mismatch → generic,
+      // never throw on an undefined copy lookup, never drop the notification.
+      const copy = NOTIF_COPY[payload.kind] as (typeof NOTIF_COPY)[keyof typeof NOTIF_COPY] | undefined;
+      const generic = !copy || payload.v !== PAYLOAD_VERSION;
       // `actions` is valid in the SW Notification context but missing from the
       // DOM lib's NotificationOptions — widen the type here.
       const options: NotificationOptions & { actions?: { action: string; title: string }[] } = {
-        body: outdated ? GENERIC_BODY : copy.body,
+        body: generic ? GENERIC_BODY : copy!.body,
         tag: payload.dedupKey, // collapse duplicates
-        actions: outdated ? [] : copy.actions,
+        actions: generic ? [] : copy!.actions,
         data: payload,
         icon: "/icons/icon.svg",
         badge: "/icons/icon.svg",
-        requireInteraction: copy.urgent,
+        requireInteraction: !generic && copy!.urgent,
       };
-      await self.registration.showNotification(copy.title, options);
+      await self.registration.showNotification(generic ? "Fasted" : copy!.title, options);
     })(),
   );
 });

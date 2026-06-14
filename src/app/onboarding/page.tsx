@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import { useMounted, usePlans, useSettings } from "@/store/hooks";
 import { Button } from "@/components/ui/Button";
 import { Check } from "lucide-react";
@@ -33,7 +34,7 @@ export default function OnboardingPage() {
     setBusy(true);
     try {
       if (chosen) {
-        await setScheduledStart({ planId: chosen as never, scheduledStartLocal: startTime });
+        await setScheduledStart({ planId: chosen as Id<"plans">, scheduledStartLocal: startTime });
       }
       if (reminders && typeof Notification !== "undefined" && Notification.permission === "default") {
         try {

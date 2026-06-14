@@ -41,14 +41,3 @@ export function validateEnd(startAt: number, endAt: number): ValidationResult {
   }
   return OK;
 }
-
-/** A custom plan's fasting window must be plausible (1h..23h of a 24h day). */
-export function validateCustomFastingMs(fastingMs: number): ValidationResult {
-  if (fastingMs <= 0) {
-    return { ok: false, code: "negative", message: "Fasting window must be positive." };
-  }
-  if (fastingMs < MIN_FAST_MS) {
-    return { ok: false, code: "too-short", message: "Fasting window is too short." };
-  }
-  return OK;
-}
